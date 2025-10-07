@@ -17,7 +17,7 @@ from todo_cli.models import TodoManager, TodoStorage
 
 
 @pytest.fixture
-def temp_storage_file() -> Generator[Path, None, None]:
+def temp_storage_file() -> Generator[Path]:  # type: ignore[type-arg]
     """Create a temporary storage file for testing."""
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
         temp_path = Path(f.name)

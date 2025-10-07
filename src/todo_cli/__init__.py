@@ -15,4 +15,4 @@ __version__ = "0.1.0"
 __author__ = "Mostafa Yasin"
 __email__ = "mostafa.a.yasin@gmail.com"
 
-__all__ = ["main", "TodoItem", "TodoManager", "TodoStorage"]
+__all__ = ["TodoItem", "TodoManager", "TodoStorage", "main"]
