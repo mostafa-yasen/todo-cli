@@ -1,0 +1,156 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "todo-cli"
+version = "0.1.0"
+description = "A modern CLI todo application demonstrating Python best practices"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Mostafa Yasin", email = "mostafa.a.yasin@gmail.com" }]
+maintainers = [{ name = "Mostafa Yasin", email = "mostafa.a.yasin@gmail.com" }]
+keywords = ["cli", "todo", "productivity", "python", "blueprint"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
+requires-python = ">=3.13"
+dependencies = ["click>=8.1.0", "rich>=13.0.0", "typer>=0.12.0"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.12.0",
+    "ruff>=0.6.0",
+    "mypy>=1.8.0",
+    "pre-commit>=3.6.0",
+]
+test = ["pytest>=8.0.0", "pytest-cov>=4.0.0", "pytest-mock>=3.12.0"]
+
+[project.scripts]
+todo = "todo_cli.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/mostafa-yasen/todo-cli"
+Documentation = "https://github.com/mostafa-yasen/todo-cli#readme"
+Repository = "https://github.com/mostafa-yasen/todo-cli.git"
+Issues = "https://github.com/mostafa-yasen/todo-cli/issues"
+
+# Tool Configuration
+[tool.hatch.build.targets.wheel]
+packages = ["src/todo_cli"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/.github", "/tests", "/.gitignore", "/.pre-commit-config.yaml"]
+
+# Pytest Configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=todo_cli",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-fail-under=80",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+# Coverage Configuration
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = ["*/tests/*", "*/test_*.py", "*/__pycache__/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+# Mypy Configuration
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+# Ruff Configuration
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+src = ["src", "tests"]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+    "PTH", # flake8-use-pathlib
+    "ERA", # eradicate
+    "PL",  # pylint
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501",    # line too long, handled by black
+    "PLR0913", # too many arguments to function call
+    "PLR0915", # too many statements
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = [
+    "ARG001",  # unused function arguments in tests
+    "S101",    # use of assert detected
+    "PLR2004", # magic value used in comparison
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["todo_cli"]
+force-sort-within-sections = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
