@@ -1,7 +1,7 @@
 line-length = 88
 target-version = "py313"
 
-select = [
+lint.select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
     "F",   # pyflakes
