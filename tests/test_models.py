@@ -69,7 +69,7 @@ class TestTodoItem:
 
         assert todo.completed
         assert todo.completed_at is not None
-        assert isinstance(todo.completed_at, datetime)  # type: ignore
+        assert isinstance(todo.completed_at, datetime)  # type: ignore[unreachable]
 
     def test_complete_already_completed_todo(self) -> None:
         """Test completing an already completed todo."""

@@ -1,5 +1,9 @@
 # Todo CLI - Modern Python Project Blueprint
 
+[![CI
+   Pipeline](https://github.com/mostafa-yasen/todo-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/mostafa-yasen/todo-cli/actions/workflows/ci.yml)
+     [![Code Coverage](https://codecov.io/gh/mostafa-yasen/todo-cli/branch/main/graph/badge.svg)](https://codecov.io/gh/mostafa-yasen/todo-cli)
+
 A comprehensive CLI-based todo application that serves as a blueprint for modern Python development practices. This project demonstrates industry standards and best practices that junior developers can learn from and adapt for company projects.
 
 ## 🎯 Learning Objectives
