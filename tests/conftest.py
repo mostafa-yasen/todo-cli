@@ -22,6 +22,10 @@ def temp_storage_file() -> Generator[Path]:  # type: ignore[type-arg]
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
         temp_path = Path(f.name)
 
+    # Check if the file is empty, write "[]" if so
+    if temp_path.stat().st_size == 0:
+        temp_path.write_text("[]")
+
     yield temp_path
 
     # Cleanup

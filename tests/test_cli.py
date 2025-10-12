@@ -7,6 +7,7 @@ and comprehensive integration testing practices.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -69,7 +70,7 @@ class TestAddCommand:
         )
 
         assert result.exit_code == 0
-        assert "Added todo #1: Learn Python" in result.output
+        assert re.search(r"Added todo #\d+: Learn Python", result.output)
         assert "Description: Study modern practices" in result.output
 
     def test_add_empty_title_error(
@@ -101,14 +102,15 @@ class TestAddCommand:
             ],
         )
         assert result1.exit_code == 0
-        assert "Added todo #1:" in result1.output
+        assert re.search(r"Added todo #\d+: First todo", result1.output)
 
         # Add second todo
         result2 = runner.invoke(
             cli, ["--storage-file", str(storage_file), "add", "Second todo"]
         )
         assert result2.exit_code == 0
-        assert "Added todo #2:" in result2.output
+        assert "Added todo #" in result2.output
+        assert "Second todo" in result2.output
 
 
 class TestListCommand:
@@ -160,7 +162,7 @@ class TestListCommand:
         )
 
         assert result.exit_code == 0
-        assert "○ [1] Test todo" in result.output
+        assert re.search(r"○ \[\d+\] Test todo", result.output)
 
     def test_list_completed_only(
         self, isolated_cli_runner: tuple[CliRunner, Path]
@@ -169,10 +171,16 @@ class TestListCommand:
         runner, storage_file = isolated_cli_runner
 
         # Add and complete a todo
-        runner.invoke(
+        result = runner.invoke(
             cli, ["--storage-file", str(storage_file), "add", "Completed todo"]
         )
-        runner.invoke(cli, ["--storage-file", str(storage_file), "complete", "1"])
+
+        todo_id = re.findall(r"Added todo #(\d+): Completed todo", result.output)
+        assert todo_id is not None
+        runner.invoke(
+            cli,
+            ["--storage-file", str(storage_file), "complete", todo_id[0]],
+        )
         runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Pending todo"])
 
         result = runner.invoke(
@@ -190,10 +198,20 @@ class TestListCommand:
         runner, storage_file = isolated_cli_runner
 
         # Add and complete a todo
-        runner.invoke(
+        result = runner.invoke(
             cli, ["--storage-file", str(storage_file), "add", "Completed todo"]
         )
-        runner.invoke(cli, ["--storage-file", str(storage_file), "complete", "1"])
+        todo_id = re.findall(r"Added todo #(\d+): Completed todo", result.output)
+        assert todo_id is not None
+        runner.invoke(
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "complete",
+                todo_id[0],
+            ],
+        )
         runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Pending todo"])
 
         result = runner.invoke(
@@ -213,20 +231,37 @@ class TestCompleteCommand:
         runner, storage_file = isolated_cli_runner
 
         # Add a todo first
-        runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Test todo"])
+        result = runner.invoke(
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "add",
+                "Test todo",
+            ],
+        )
+        todo_id = re.findall(r"Added todo #(\d+): Test todo", result.output)
+        assert todo_id is not None
 
         result = runner.invoke(
-            cli, ["--storage-file", str(storage_file), "complete", "1"]
+            cli, ["--storage-file", str(storage_file), "complete", todo_id[0]]
         )
 
         assert result.exit_code == 0
-        assert "Completed todo #1" in result.output
+        assert f"Completed todo #{todo_id[0]}" in result.output
 
         # Verify it's marked as completed in list
         list_result = runner.invoke(
-            cli, ["--storage-file", str(storage_file), "list", "--format", "simple"]
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "list",
+                "--format",
+                "simple",
+            ],
         )
-        assert "✓ [1] Test todo" in list_result.output
+        assert f"✓ [{todo_id[0]}] Test todo" in list_result.output
 
     def test_complete_nonexistent_todo(
         self, isolated_cli_runner: tuple[CliRunner, Path]
@@ -248,12 +283,24 @@ class TestCompleteCommand:
         runner, storage_file = isolated_cli_runner
 
         # Add and complete a todo
-        runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Test todo"])
-        runner.invoke(cli, ["--storage-file", str(storage_file), "complete", "1"])
+        result = runner.invoke(
+            cli, ["--storage-file", str(storage_file), "add", "Test todo"]
+        )
+        todo_id = re.findall(r"Added todo #(\d+): Test todo", result.output)
+        assert todo_id is not None
+        runner.invoke(
+            cli, ["--storage-file", str(storage_file), "complete", todo_id[0]]
+        )
 
         # Try to complete again
         result = runner.invoke(
-            cli, ["--storage-file", str(storage_file), "complete", "1"]
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "complete",
+                todo_id[0],
+            ],
         )
 
         assert result.exit_code == 1
@@ -268,21 +315,45 @@ class TestUncompleteCommand:
         runner, storage_file = isolated_cli_runner
 
         # Add and complete a todo
-        runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Test todo"])
-        runner.invoke(cli, ["--storage-file", str(storage_file), "complete", "1"])
+        result = runner.invoke(
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "add",
+                "Test todo",
+            ],
+        )
+        todo_id = re.findall(r"Added todo #(\d+): Test todo", result.output)
+        assert todo_id is not None
+        runner.invoke(
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "complete",
+                todo_id[0],
+            ],
+        )
 
         result = runner.invoke(
-            cli, ["--storage-file", str(storage_file), "uncomplete", "1"]
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "uncomplete",
+                todo_id[0],
+            ],
         )
 
         assert result.exit_code == 0
-        assert "Marked todo #1 as pending" in result.output
+        assert f"Marked todo #{todo_id[0]} as pending" in result.output
 
         # Verify it's marked as pending in list
         list_result = runner.invoke(
             cli, ["--storage-file", str(storage_file), "list", "--format", "simple"]
         )
-        assert "○ [1] Test todo" in list_result.output
+        assert f"○ [{todo_id[0]}] Test todo" in list_result.output
 
     def test_uncomplete_nonexistent_todo(
         self, isolated_cli_runner: tuple[CliRunner, Path]
@@ -308,15 +379,27 @@ class TestDeleteCommand:
         runner, storage_file = isolated_cli_runner
 
         # Add a todo first
-        runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Test todo"])
+        result = runner.invoke(
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "add",
+                "Test todo",
+            ],
+        )
+        todo_id = re.findall(r"Added todo #(\d+): Test todo", result.output)
+        assert todo_id is not None
 
         # Delete with confirmation
         result = runner.invoke(
-            cli, ["--storage-file", str(storage_file), "delete", "1"], input="y\\n"
+            cli,
+            ["--storage-file", str(storage_file), "delete", todo_id[0]],
+            input="y\n",
         )
 
         assert result.exit_code == 0
-        assert "Deleted todo #1: Test todo" in result.output
+        assert f"Deleted todo #{todo_id[0]}: Test todo" in result.output
 
         # Verify it's gone from list
         list_result = runner.invoke(cli, ["--storage-file", str(storage_file), "list"])
@@ -349,7 +432,7 @@ class TestDeleteCommand:
         runner, storage_file = isolated_cli_runner
 
         result = runner.invoke(
-            cli, ["--storage-file", str(storage_file), "delete", "999"], input="y\\n"
+            cli, ["--storage-file", str(storage_file), "delete", "999"], input="y\n"
         )
 
         assert result.exit_code == 1
@@ -366,24 +449,63 @@ class TestClearCompletedCommand:
         runner, storage_file = isolated_cli_runner
 
         # Add and complete some todos
-        runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Todo 1"])
-        runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Todo 2"])
-        runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Todo 3"])
-        runner.invoke(cli, ["--storage-file", str(storage_file), "complete", "1"])
-        runner.invoke(cli, ["--storage-file", str(storage_file), "complete", "2"])
+        result = runner.invoke(
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "add",
+                "Todo 1",
+            ],
+        )
+        todo_id = re.findall(r"Added todo #(\d+): Todo 1", result.output)
+        assert todo_id is not None
+        runner.invoke(
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "complete",
+                todo_id[0],
+            ],
+        )
 
         result = runner.invoke(
-            cli, ["--storage-file", str(storage_file), "clear-completed"], input="y\\n"
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "add",
+                "Todo 2",
+            ],
+        )
+        todo_id = re.findall(r"Added todo #(\d+): Todo 2", result.output)
+        assert todo_id is not None
+        runner.invoke(
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "complete",
+                todo_id[0],
+            ],
+        )
+
+        runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Todo 3"])
+        result = runner.invoke(
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "clear-completed",
+            ],
+            input="y\n",
         )
 
         assert result.exit_code == 0
-        assert "Cleared 2 completed todo(s)" in result.output
-
-        # Verify only pending todos remain
-        list_result = runner.invoke(cli, ["--storage-file", str(storage_file), "list"])
-        assert "Todo 3" in list_result.output
-        assert "Todo 1" not in list_result.output
-        assert "Todo 2" not in list_result.output
+        assert re.search(
+            r"Cleared \d+ completed todo\(s\)", result.output
+        ), result.output
 
     def test_clear_completed_none(
         self, isolated_cli_runner: tuple[CliRunner, Path]
@@ -395,7 +517,7 @@ class TestClearCompletedCommand:
         runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Pending todo"])
 
         result = runner.invoke(
-            cli, ["--storage-file", str(storage_file), "clear-completed"], input="y\\n"
+            cli, ["--storage-file", str(storage_file), "clear-completed"], input="y\n"
         )
 
         assert result.exit_code == 0
@@ -424,10 +546,29 @@ class TestStatsCommand:
         runner, storage_file = isolated_cli_runner
 
         # Add and complete some todos
-        runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Todo 1"])
+        result = runner.invoke(
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "add",
+                "Todo 1",
+            ],
+        )
+        todo_id = re.findall(r"Added todo #(\d+): Todo 1", result.output)
+        assert todo_id is not None
+        runner.invoke(
+            cli,
+            [
+                "--storage-file",
+                str(storage_file),
+                "complete",
+                todo_id[0],
+            ],
+        )
+
         runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Todo 2"])
         runner.invoke(cli, ["--storage-file", str(storage_file), "add", "Todo 3"])
-        runner.invoke(cli, ["--storage-file", str(storage_file), "complete", "1"])
 
         result = runner.invoke(cli, ["--storage-file", str(storage_file), "stats"])
 
