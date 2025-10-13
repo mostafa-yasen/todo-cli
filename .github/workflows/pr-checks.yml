@@ -1,0 +1,151 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+env:
+  PYTHON_VERSION: "3.13"
+  UV_VERSION: "0.4.0"
+
+jobs:
+  # ============================================================================
+  # PR METADATA VALIDATION
+  # ============================================================================
+  pr-validation:
+    name: PR Validation
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Check PR title format
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+          requireScope: false
+
+      - name: Check PR size
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const additions = pr.additions;
+            const deletions = pr.deletions;
+            const changes = additions + deletions;
+
+            console.log(`PR has ${additions} additions and ${deletions} deletions (${changes} total)`);
+
+            if (changes > 1000) {
+              core.warning(`This PR is quite large (${changes} lines). Consider breaking it into smaller PRs for easier review.`);
+            }
+
+  # ============================================================================
+  # QUICK FEEDBACK - Fast checks for immediate feedback
+  # ============================================================================
+  quick-checks:
+    name: Quick Feedback
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Quick lint check (changed files only)
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install ruff
+
+          # Get changed Python files
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }}...HEAD | grep '\.py$' || true)
+
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "Linting changed files:"
+            echo "$CHANGED_FILES"
+            ruff check $CHANGED_FILES
+          else
+            echo "No Python files changed"
+          fi
+
+      - name: Check for TODOs in changed files
+        run: |
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }}...HEAD | grep '\.py$' || true)
+
+          if [ -n "$CHANGED_FILES" ]; then
+            TODOS=$(grep -n "# TODO\|# FIXME\|# HACK" $CHANGED_FILES || true)
+            if [ -n "$TODOS" ]; then
+              echo "⚠️ Found TODOs/FIXMEs in changed files:"
+              echo "$TODOS"
+            fi
+          fi
+
+  # ============================================================================
+  # CODE COVERAGE DIFF - Show coverage impact
+  # ============================================================================
+  coverage-diff:
+    name: Coverage Diff
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -e ".[dev]"
+
+      - name: Run tests with coverage
+        run: |
+          source .venv/bin/activate
+          pytest --cov=todo_cli --cov-report=json --cov-report=term
+
+      - name: Comment coverage on PR
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MINIMUM_GREEN: 90
+          MINIMUM_ORANGE: 80
