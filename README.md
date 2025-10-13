@@ -6,6 +6,8 @@
 
 A comprehensive CLI-based todo application that serves as a blueprint for modern Python development practices. This project demonstrates industry standards and best practices that junior developers can learn from and adapt for company projects.
 
+## This is a comment
+
 ## 🎯 Learning Objectives
 
 This project is designed to teach:
